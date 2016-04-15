@@ -1,0 +1,19 @@
+{
+  "name": "studey_requiry'",
+  "version": "1.0.0",
+  "description": "学习requiryjs",
+  "main": "gulpfile.js",
+  "dependencies": {
+    "gulp-webserver": "^0.9.1",
+    "npm": "^3.8.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "123456"
+  ],
+  "author": "ckey",
+  "license": "ISC"
+}

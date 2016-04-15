@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width">
+    <title>测试高德</title>
+    <link rel="stylesheet" href="http://cache.amap.com/lbs/static/main1119.css"/>
+    <style type="text/css">
+        body, html {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            font-family: "微软雅黑";
+        }
+
+        #container {
+            width: 100%;
+            height: 100%
+        }
+
+        @media screen and (max-width: 800px) {
+            #toolbar {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="container"></div>
+
+<div id="toolbar"
+     style="position:fixed; right:20px;top:20px;width:20%;height:180px;background: #fff;z-index: 9999;text-align: center">
+    <p>节点数 : <input id="num" type="text"/></p>
+
+    <p>层 数 : <input id="level" type="text"/></p>
+
+    <p>速 度 : <input id="speed" type="text"/></p>
+    <a id="gogogo" href="#"
+       style="display: inline-block;width:50px;height:30px;text-align: center;line-height:30px;">执行</a>
+</div>
+
+<script src="http://webapi.amap.com/maps?v=1.3&key=cd55f5d0429f071191606ec511ea2344"></script>
+<script src="../js/public/jquery.min.js"></script>
+<script>
+    /**
+     * 起始点唯一，终止点array，
+     * */
+    var startPoint = '', endPoint = [], points, speed;
+
+    /*创建地图*/
+    var map = new AMap.Map('container', {
+        resizeEnable: true,
+        zoom: 1,
+       // mapStyle: 'dark',
+        center: [116.397428, 39.90923]
+    });
+
+    /*初始化*/
+    map.plugin(['AMap.ToolBar'], function () {
+
+      //  loadFirst();
+    });
+
+    /*第一次加载点*/
+    function loadFirst() {
+        $.ajax({
+            url: '../db/point1.json',
+            dataType: 'json',
+            async: 'true',
+            success: function (data) {
+                execFirst(data);
+            }
+        })
+    }
+
+    /*地图加载完 触发事件*/
+    map.on('complete', function (e) {
+        //  makeFly(endPoint, startPoint,speed);
+    });
+
+    /*起飞动画*/
+    function makeFly(endPoint,startPoint, speed) {
+        var endPoint = endPoint;
+        var startPoint = startPoint;
+        var speed = speed;
+        endPoint.forEach(function (item) {
+            /*创建一个飞行marker*/
+            new AMap.Marker({
+                map: map,
+                size: new AMap.Size(120, 50),
+                autoRotation: true,
+                icon: new AMap.Icon({ //图标大小   貌似没有什么反应
+                    size: new AMap.Size(50, 50),
+                    image: '../image/yes1.png',
+                    imageOffset: new AMap.Pixel(-22, 24)
+                }),
+                position: [startPoint.split(',')[0], startPoint.split(',')[1]]
+            }).on('moving', function () {
+                        /*  if($(document).width()>900){
+                         map.panTo(this.getPosition());
+                         }*/
+
+                    }).on('moveend', function () {
+                        drawMaker(item);
+                        // drawLine(startPoint,item,false)
+                        var position = this.getPosition() + "";
+                        map.remove(this);
+                        var subPoint = [];
+                        var speed = 0;
+                        /*判断这点是否还存在子节点*/
+                        points.forEach(function (it) {
+                            var i;
+                            if (it.subpoint === position) {
+                                i = it.sequence + 1;
+                                speed = it.speed;
+                            }
+                            points.forEach(function (t) {
+                                if (t.sequence === i) {
+                                    if (t.start === position) {
+                                        subPoint.push(t.subpoint);
+                                    }
+                                }
+                            });
+                        });
+                        makeFly(subPoint, position, speed);
+                    }).moveAlong(new AMap.LngLat(item.split(',')[0], item.split(',')[1]), speed);
+            // console.log(speed);
+        });
+    }
+        var googleLayer = new AMap.TileLayer({
+            // 图块取图地址
+            tileUrl: 'http://mt{1,2,3,0}.google.cn/vt/lyrs=m@142&hl=zh-CN&gl=cn&x=[x]&y=[y]&z=[z]&s=Galil'
+        });
+        googleLayer.setMap(map);
+    /*画线*/
+    function drawLine(startPoint, endPoint, flag) {
+        var startPoint = startPoint;
+        var endPoint = endPoint;
+        var lineArr = [
+            [startPoint.split(',')[0], startPoint.split(',')[1]],
+            [endPoint.split(',')[0], endPoint.split(',')[1]]
+        ];
+
+        var polyline = new AMap.Polyline({
+            path: lineArr,            // 设置线覆盖物路径
+            strokeColor: '#FF6666',   // 线颜色
+            strokeOpacity: 1,         // 线透明度
+            strokeWeight: 2,          // 线宽
+            strokeStyle: 'solid',     // 线样式
+            strokeDasharray: [10, 5], // 补充线样式
+            geodesic: true            // 绘制大地线（这需要自己试试，就知道是什么意思了）
+        });
+        if (flag === true) {
+            setTimeout(remove, 500);
+            function remove() {
+                polyline.hide()
+            }
+        }
+        polyline.setMap(map);
+    }
+
+    /*画图标*/
+    function drawMaker(item) {
+        var item = item;
+        var marker=new AMap.Marker({
+            map: map,
+            icon: new AMap.Icon({ //图标大小
+                image: "../image/point.png",
+                imageOffset: new AMap.Pixel(0, 18)
+            }),
+            position: [item.split(',')[0], item.split(',')[1]]
+        });
+        marker.setMap(map);
+    }
+    /*放大缩小监听*/
+    AMap.event.addListener(map, 'zoomend', function () {
+        //  map.setZoom(5);
+    });
+
+    function execFirst(data) {
+        map.clearMap();
+        points = data.point.list;
+        startPoint = data.point.start;
+        speed = data.point.speed;
+        drawMaker(data.point.start);
+        points.forEach(function (item) {
+            if (item.sequence == 1) {
+                endPoint.push(item.subpoint);
+                makeFly( endPoint,startPoint, speed);
+            }
+        });
+    }
+</script>
+<script src="../js/mdl1/mdl1.js"></script>
+</body>
+</html>
